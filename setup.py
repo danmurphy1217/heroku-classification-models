@@ -19,7 +19,8 @@ import time
 st.title("Machine Learning Models predicting on self-collected data")
 url = "https://docs.google.com/spreadsheets/d/1F-UPZf3je1x4M8ryp34OCe29E-CagCrUn9mFzsyfmJE/edit?usp=sharing"
 st.write("A sample of the data can be found here: \n")
-if st.button('Check out the dataset'):
+inspect_data = st.button('Check out the dataset')
+if inspect_data:
     webbrowser.open_new_tab(url)
 
 st.header("**Part 1. Data Pre-Clean vs. Post-Clean**")
