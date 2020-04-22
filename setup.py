@@ -15,13 +15,23 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import webbrowser
 import time
+from bokeh.models.widgets import Div
+
+
 
 st.title("Machine Learning Models predicting on self-collected data")
 url = "https://docs.google.com/spreadsheets/d/1F-UPZf3je1x4M8ryp34OCe29E-CagCrUn9mFzsyfmJE/edit?usp=sharing"
 st.write("A sample of the data can be found here: \n")
-inspect_data = st.button('Check out the dataset')
-if inspect_data:
-    webbrowser.open_new_tab(url)
+
+
+if st.button('Checkout the dataset'):
+    js = "window.open_new_tab('{0}')".format(url)  # New tab or window
+    js = "window.location.href = '{0}'".format(url)  # Current tab
+    html = '<img src onerror="{}">'.format(js)
+    div = Div(text=html)
+    st.bokeh_chart(div)
+
+
 
 st.header("**Part 1. Data Pre-Clean vs. Post-Clean**")
 """
