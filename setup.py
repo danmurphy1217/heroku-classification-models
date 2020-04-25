@@ -5,13 +5,11 @@ import pandas as pd
 import pandas.plotting as pdplt
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, GridSearchCV
 import seaborn as sns
 import plotly.express as pl
 from plotly.subplots import make_subplots
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, auc, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 import webbrowser
 import time
@@ -138,7 +136,7 @@ if part_selector == "Part II. Implementing Models":
     st.subheader("First, Choose Your Model: ")
     model = st.selectbox(
         "Model Selection:",
-        ["K-Nearest Neighbors", "Support Vector Classifier", "Decision Tree", "Logistic Regression"]
+        ["K-Nearest Neighbors", "Support Vector Classifier"]
         )
     st.subheader("Second, Choose Your Parameters:")
     st.text("If you need help, click here: ")
@@ -168,32 +166,6 @@ if part_selector == "Part II. Implementing Models":
             best_parameters = gs_SVC.best_params_
             st.write("The parameters that lead to the highest accuracy are: ")
             return st.table(pd.DataFrame(best_parameters, index=[0]))
-
-        elif model_name == "Decision Tree":
-            param_grid = {
-                'criterion':['gini', 'entropy'],
-                'splitter':['best', 'random'],
-                'max_features': ['auto', 'sqrt', 'log2']
-            }
-            gs_DT = GridSearchCV(estimator= DecisionTreeClassifier(), param_grid= param_grid, scoring="accuracy")
-            gs_DT.fit(x_train, y_train)
-            best_parameters = gs_DT.best_params_
-            st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.DataFrame(best_parameters, index=[0]))
-
-        elif model_name == "Logistic Regression":
-            param_grid = {
-                'penalty':['l1', 'l2'],
-                'solver':['lbfgs', 'liblinear', 'sag', 'saga'],
-                'max_iter':[100, 150]
-
-            }
-            gs_LOG = GridSearchCV(estimator = LogisticRegression(), param_grid=param_grid, scoring='accuracy')
-            gs_LOG.fit(x_train, y_train)
-            best_parameters = gs_LOG.best_params_
-            st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.DataFrame(best_parameters, index=[0]))
-
 
 
     if st.button("Run a Grid Search"):
@@ -245,56 +217,6 @@ if part_selector == "Part II. Implementing Models":
         })
         score = svc_clf.score(x_test, y_test)
         st.write(score)
-    elif model == "Decision Tree":
-        criteria =st.selectbox(
-            "Function to measure the split quality:",
-            ["gini", "entropy"]
-        )
-        feats = st.selectbox(
-            "Max Features considered for best split:",
-            ["auto", "sqrt", "log2", None]
-        )
-        split = st.selectbox(
-            "Splitter (the strategy used to choose the split at each node):",
-            ["best", "random"]
-        )
-
-        dt_clf = DecisionTreeClassifier(criterion=criteria, splitter=split, max_features=feats, random_state=42)
-        dt_clf.fit(x_train, y_train)
-        y_preds_dt = dt_clf.predict(x_test)
-        results = pd.DataFrame(
-            {
-                "Actual": y_test,
-                "Predicted": y_preds_dt
-            }
-        )
-        score = dt_clf.score(x_test, y_test)
-        st.write(score)
-    elif model == "Logistic Regression":
-        iters = st.selectbox(
-            "Max iterations for solvers to converge: ",
-            [50, 100, 150, 200]
-        )
-        pen = st.selectbox(
-            "Penalty (l1 or l2)",
-            ["l2", "l1"]
-        )
-        sol = st.selectbox(
-            "Algorithm to use in the optimization",
-            ["lbfgs", "liblinear", "sag", "saga"]
-        )
-
-        log_clf = LogisticRegression(penalty=pen, random_state=42, solver= sol, n_jobs=-1, max_iter = iters)
-        log_clf.fit(x_train, y_train)
-        y_preds_log = log_clf.predict(x_test)
-        results = pd.DataFrame(
-            {
-                "Predicted": y_preds_log,
-                "Actual": y_test
-            }
-        )
-        score = log_clf.score(x_test, y_test)
-        st.write(score)
     else:
         unknown_input = []
         unknown_input.append(model)
@@ -307,7 +229,7 @@ if part_selector == "Part II. Implementing Models":
         if model == "K-Nearest Neighbors":
             viz_selector = st.selectbox(
                 "Choose your visualization:",
-                ["Confusion Matrix", "Test Accuracy Vs. # of Neighbors"]
+                ["Confusion Matrix", "Test Accuracy Vs. # of Neighbors", "ROC Curve"]
             )
             # if viz_selector == "Boxplot":
             #     fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2, 2, figsize=[8, 6])
@@ -342,10 +264,22 @@ if part_selector == "Part II. Implementing Models":
                 ), x= ["False", "True"], y=["False", "True"])
                 fig.update_xaxes(side = "top")
                 return st.plotly_chart(fig)
+            elif viz_selector == "ROC Curve":
+                fp_rate, tp_rate, _ = roc_curve(y_test, preds_knn)
+                plt.plot(fp_rate, tp_rate, color = "navy")
+                plt.plot([0, 1], [0, 1], linestyle='-', color = "lightblue")
+                plt.xlim=[0.0, 1.0]
+                plt.ylim=[0.0, 1.25]
+                plt.xlabel("False Positive Rate")
+                plt.ylabel("True Positive Rate")
+                plt.title("ROC Curve for KNN Model")
+                plt.legend(["ROC Curve", "Line with slope 1"], loc = "lower right")
+                st.pyplot()
+
         if model == "Support Vector Classifier":
             viz_selector = st.selectbox(
                 "Choose your visualization for {}: ".format(model),
-                ["Confusion Matrix", "Test Accuracy Vs. Kernel",]
+                ["Confusion Matrix", "Test Accuracy Vs. Kernel", "ROC Curve"]
             )
             if viz_selector == "Confusion Matrix":
                 c_mat = pd.crosstab(y_preds_svm, y_test, colnames= ['False'], rownames=['True'])
@@ -388,87 +322,17 @@ if part_selector == "Part II. Implementing Models":
                 })
                 fig.update_layout(title="Accuracy Score vs. Kernel Type")
                 return st.plotly_chart(fig)
+            elif viz_selector == "ROC Curve":
+                fp_rate, tp_rate,  _ = roc_curve(y_test, y_preds_svm)
+                plt.plot(fp_rate, tp_rate, color = "navy")
+                plt.plot([0, 1], [0, 1], color = "lightblue", linestyle="-")
+                plt.legend(["ROC Curve", "Line with slope 1"])
+                plt.xlabel("False Positive Rate")
+                plt.ylabel("True Positive Rate")
+                plt.title("ROC Curve for SVC Model")
+                st.pyplot()
 
 
-        if model == "Logistic Regression":
-            viz_selector = st.selectbox(
-                "Choose your visualization for {}: ".format(model),
-                ["Confusion Matrix", "Test Accuracy vs. Optimization Algorithm Used"]
-            )
-            if viz_selector == "Confusion Matrix":
-                c_mat = pd.crosstab(y_preds_log, y_test, rownames=["True"], colnames=["False"])
-                st.write(c_mat)
-                fig = plt.subplots(1, 1, figsize=[8, 6])
-                fig = pl.imshow(confusion_matrix(y_preds_log, y_test), labels=dict(x="Testing Data", y="Predicted Data"),
-                            x=['False', 'True'],
-                            y=['False', 'True']
-                    )
-                fig.update_xaxes(side = "top")
-                return st.plotly_chart(fig)
-            elif viz_selector == "Test Accuracy vs. Optimization Algorithm Used":
-                log_lbfgs = LogisticRegression(solver='lbfgs')
-                fit_model1 = log_lbfgs.fit(x_train, y_train)
-
-                log_liblinear = LogisticRegression(solver='liblinear')
-                fit_model2 =  log_liblinear.fit(x_train, y_train)
-                
-                log_sag = LogisticRegression(solver='sag')
-                fit_model3 = log_sag.fit(x_train, y_train)
-
-                log_saga = LogisticRegression(solver='saga')
-                fit_model4 = log_saga.fit(x_train, y_train)
-
-                data_for_chart = dict({
-                        "lbfgs": fit_model1.score(x_test, y_test),
-                        'liblinear' : fit_model2.score(x_test, y_test),
-                        'sag' : fit_model3.score(x_test, y_test),
-                        'saga' : fit_model4.score(x_test, y_test)
-
-                    })
-                df = pd.DataFrame(data_for_chart, index=[0])
-                fig = pl.bar(df, x = ['lbfgs', 'liblinear', 'sag', 'saga'], y = [fit_model1.score(x_test, y_test), fit_model2.score(x_test, y_test), fit_model3.score(x_test, y_test), fit_model4.score(x_test, y_test)], color = [fit_model1.score(x_test, y_test), fit_model2.score(x_test, y_test), fit_model3.score(x_test, y_test), fit_model4.score(x_test, y_test)])
-                return st.plotly_chart(fig)
-                
-        if model == "Decision Tree":
-            viz_selector = st.selectbox(
-                "Choose your visualization for {}: ".format(model),
-                ["Confusion Matrix", "Accuracy vs. Function"]
-            )
-            if viz_selector == "Confusion Matrix":
-                c_mat = pd.crosstab(y_preds_dt, y_test, rownames=['True'], colnames=['False'])
-                st.write(c_mat)
-                fig = pl.imshow(c_mat
-                , 
-                labels=dict(x="Testing Data", y="Predicted Data"),
-                        x=['False', 'True'],
-                        y=['False', 'True']
-                )
-                fig.update_xaxes(side = "top")
-                return st.plotly_chart(fig)
-            elif viz_selector == "Accuracy vs. Function":
-                dt_gini = DecisionTreeClassifier(criterion='gini')
-                dt_gini.fit(x_train, y_train)
-                score_gini = dt_gini.score(x_test, y_test)
-
-                dt_entropy = DecisionTreeClassifier(criterion='entropy')
-                dt_entropy.fit(x_train, y_train)
-                score_entropy = dt_entropy.score(x_test, y_test)
-
-                data_for_chart = dict(
-                    {
-                        'gini': score_gini,
-                        'entropy': score_entropy
-                    }
-                )
-                df = pd.DataFrame(data_for_chart, index=[0], columns= ['gini', 'entropy'])
-                fig = pl.bar(df, x = ['gini', 'entropy'], y = [score_gini, score_entropy], 
-                color=[score_gini, score_entropy],
-                labels={
-                    'x':'Function Type',
-                    'y': 'Accuray (estimator.score())'
-                })
-                fig.update_layout(title="Function Type vs. Accuracy")
-                return st.plotly_chart(fig)
 
     return_visualization()
 
@@ -479,9 +343,9 @@ if part_selector == "Part III. Try Out Your Own Data":
     st.subheader("First, Input your data:")
 
 
-    photo_val = st.text_input("Photoresistor Value: ", value=".4541")
-    temp_val = st.text_input("Temperature Value: ", value='.7368')
-    humid_val = st.text_input("Humidity Value: ", value='.8923')
+    photo_val = st.text_input("Photoresistor Value: ", value="Example: .4541")
+    temp_val = st.text_input("Temperature Value: ", value='Example: .7368')
+    humid_val = st.text_input("Humidity Value: ", value='Example: .8923')
     hour_num = st.selectbox(
         "Hour Value: ",
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -493,7 +357,7 @@ if part_selector == "Part III. Try Out Your Own Data":
     st.subheader("Now, select your model:")
     model_selector = st.selectbox(
         "Model Selector:",
-        ["K-Nearest Neighbors", "Support Vector Classifier", "Decision Tree", "Logistic Regression"]
+        ["K-Nearest Neighbors", "Support Vector Classifier"]
     )
     def hourConverterTwo(timeframe, hour):
         if timeframe == "PM":
@@ -523,15 +387,6 @@ if part_selector == "Part III. Try Out Your Own Data":
             svc_clf = SVC(degree=4, gamma='scale', kernel='poly')
             svc_clf.fit(x_train, y_train)
             preds = svc_clf.predict(input_data.reshape(1, -1))
-            
-        elif model_name=="Decision Tree":
-            dt_clf = DecisionTreeClassifier(criterion='entropy', max_features='log2', splitter='random')
-            dt_clf.fit(x_train, y_train)
-            preds = dt_clf.predict(input_data.reshape(1, -1))
-        elif model_name == "Logistic Regression":
-            log_clf = LogisticRegression(penalty='l1', max_iter=150, solver='saga', warm_start=0, n_jobs=-1)
-            log_clf.fit(x_train, y_train)
-            preds = log_clf.predict(input_data.reshape(1, -1))
         return st.dataframe(preds)
     if confirmation_button:
         buildModel(model_selector, transform_user_input(photo= photo_val, temp=temp_val, humidity= humid_val, hour=hour_num))
