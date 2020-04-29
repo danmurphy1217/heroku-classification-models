@@ -78,7 +78,7 @@ unpickled_clean = pd.read_pickle('./cleaned_df')
 
 
 
-st.title("Machine Learning Models predicting on self-collected data")
+st.title("Classification Models with Data Collected from an ESP8266 Board, Photoresistor, Digital Button, and dht Sensor")
 
 part_selector = st.sidebar.selectbox(label= "Project Outline", options= ["Part I. Data Analysis, Cleaning, and Viz", "Part II. Implementing Models", "Part III. Try Out Your Own Data"])
 
@@ -86,6 +86,8 @@ if part_selector == "Part I. Data Analysis, Cleaning, and Viz":
     url = "https://docs.google.com/spreadsheets/d/1F-UPZf3je1x4M8ryp34OCe29E-CagCrUn9mFzsyfmJE/edit?usp=sharing"
     st.write("A sample of the data can be found here: \n")
     st.markdown("[Link To Dataset](https://docs.google.com/spreadsheets/d/1F-UPZf3je1x4M8ryp34OCe29E-CagCrUn9mFzsyfmJE/edit?usp=sharing)")
+    st.write("A previous write-up on this experiment can be found here: \n")
+    st.markdown("[Link to Article](https://medium.com/@danielmurph8/esp8266-nodemcu-weekend-project-4812d7636ad)")
 
 
 
@@ -107,7 +109,7 @@ if part_selector == "Part I. Data Analysis, Cleaning, and Viz":
     4. **_Dates_** (used to incorporate time series into the model)
     """
     st.subheader("**_Part A. Pre-Clean_**")
-    st.dataframe(unpickled_df.head(10))
+    st.dataframe(unpickled_df.head(15))
     r, c = unpickled_df.shape
     st.text("Shape of Initial Data: {}".format(unpickled_df.shape) + ". There are " + str(r) + " rows and " + str(c) + " columns.")
     """
@@ -115,7 +117,7 @@ if part_selector == "Part I. Data Analysis, Cleaning, and Viz":
     1. Rename Columns. What are Value1? Value2? etc... \n
     2. By taking a look at Value3, we see that the first 9 rows are different from the following 5382. We'll want to remove these or determine a representative placeholder for the missing values. \n
     3. Normalize columns 3 (Value1), 4 (Value2), and 5 (Value3) \n
-    3. Split the "Date" column at 'at' and retrieve the hour for each row. Then, we will one-hot-encode the hour values.
+    3. Split the "Date" column at 'at' and retrieve the hour for each row. Then, we will one-hot-encode the hours.
     """
     r, c = unpickled_clean.shape
     st.subheader("**_Part B. Post-Clean_**")
@@ -133,7 +135,7 @@ if part_selector == "Part I. Data Analysis, Cleaning, and Viz":
 
 
 if part_selector == "Part II. Implementing Models":
-    st.header("**Part 2. Use and Analyze Various Machine Learning Models:**")
+    st.header("**Part 2. Learn About, Use and Analyze Two ML Models:**")
     x = unpickled_clean.drop(columns=["Digital_Button"])
     y = unpickled_clean['Digital_Button']
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = .3, random_state = 42)
@@ -143,44 +145,65 @@ if part_selector == "Part II. Implementing Models":
         "Model Selection:",
         ["K-Nearest Neighbors", "Support Vector Classifier"]
         )
+
+    if model == "K-Nearest Neighbors":
+        st.write("KNN is a supervised machine learning algorithm that can be used for both classification and regression tasks. In this example, we will be using it for classification (to answer the question 'am I in my room (1) or not (0)?'). Simply put, KNN uses feature similarity to predict the values of new data points. The intuition behind this model is that things with **similar** feature values tend to be **similar**.")
+        st.write('The distance between points is calculated using the following equation: ')
+        st.latex("d(x,y) = d(y,x) = (\sum_{i=1}^{n} \\big|{x_i - y_i}\\big|^p)^\\frac{1}{p}")
+        st.write("We can change p to calculate the distance in different ways:")
+        st.subheader("1. Manhattan Distance (p = 1)")
+        st.write("This is useful for calculating the distance between two points on a grid-like path (like city blocks)")
+        st.latex('d(x, y) = d(y, x) = \sum_{i=1}^{n} \\big|{x_i - y_i}\\big|')
+        st.subheader("2. Euclidean Distance (p = 2)")
+        st.write("This is useful for calculating the distance between points in a plane (Pythagorean Theorem)")
+        st.latex('d(x, y) = d(y, x) = \sum_{i=1}^{n} \sqrt{(x_i + y_i)^2}')
+        st.subheader("3. Chebychev Distance (p = ∞)")
+        st.write("This is useful for finding where the difference between two vectors is the maximum")
+        st.latex('d(x, y) = d(y, x) = \max(\\big|x_i - y_i\\big|)')
+    elif model == "Support Vector Classifier":
+        st.write("Support Vector Machine is an algorithm that finds a hyperplane in an n-dimensional space (with n being the number of features in your dataset). This hyperplane acts as a decision boundary that distinctly classifies data points. In Linear Regression models, the model is optimized when **w*** and **b*** create a line with a *minimized* loss function (typically MSE or RMSE). In contrast, SVM models are optimized once the distance between the decision boundary and the closest data point (the **margin**) is *maximized*.")
+        st.write("The margin can be represented in functional and geometric terms: ")
+        st.subheader("1. Functional Margin")
+        st.write('Returns a number that tells us whether a data point, x, is properly classified or not. If the prediction is the same as the actual, the formula will return +1. If the predicted is different from the actual, the formula will return -1.')
+        st.latex("\gamma_i = y_i(\omega^T x_i +  b)")
+        st.subheader("2. Geometric Margin")
+        st.write("This is the euclidean distance between a data point, x, and the hyperplane.")
+        st.latex("\hat{\gamma_i} = \\frac{\gamma_i}{\\big|\\big|\omega\\big|\\big|}")
     st.subheader("Second, Choose Your Parameters:")
     st.text("If you need help, click here: ")
+    btn = st.button("Run a Grid Search")
     # @st.cache(show_spinner=True, suppress_st_warning=True, hash_funcs={st.DeltaGenerator.DeltaGenerator: lambda _ : None})
-    def run_grid_search(model_name):
-        if model_name == "K-Nearest Neighbors":
-            param_grid = {
+    if btn & (model == "K-Nearest Neighbors"):
+        param_grid = {
                 "n_neighbors" : [5, 10, 15],
                 "weights" : ['uniform', 'distance'],
                 'algorithm' : ['auto', 'ball_tree', 'kd_tree', 'brue']
             }
-            gs_KNN = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, scoring='accuracy', cv=5, n_jobs=-1)
-            gs_KNN.fit(x_train, y_train)
-            best_parameters = gs_KNN.best_params_
-            df_for_pickling = pd.DataFrame(best_parameters, index=[0])
-            pickled_gs = df_for_pickling.to_pickle("./gridSearchDataKNN")
-            st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.read_pickle("./gridSearchDataKNN"))
-
-        elif model_name == "Support Vector Classifier":
-            param_grid = {
+        gs_KNN = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, scoring='accuracy', cv=5, n_jobs=-1)
+        gs_KNN.fit(x_train, y_train)
+        best_parameters = gs_KNN.best_params_
+        df_for_pickling = pd.DataFrame(best_parameters, index=[0])
+        pickled_gs = df_for_pickling.to_pickle("./gridSearchDataKNN")
+        st.write("The parameters that lead to the highest accuracy are: ")
+        st.table(pd.read_pickle("./gridSearchDataKNN"))
+        
+    elif btn & (model == "Support Vector Classifier"):
+        param_grid = {
                 'kernel':['linear', 'poly', 'rbf', 'sigmoid'],
                 'degree': [2, 3, 4],
                 'gamma': ['scale', 'auto']
 
             }
-            gs_SVC = GridSearchCV(estimator=SVC(), param_grid=param_grid, scoring="accuracy", cv=3, n_jobs=-1)
-            gs_SVC.fit(x_train, y_train)
-            best_parameters = gs_SVC.best_params_
-            df_for_pickling = pd.DataFrame(best_parameters, index=[0])
-            pickled_gs = df_for_pickling.to_pickle("./gridSearchDataSVC")            
-            st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.read_pickle("./gridSearchDataSVC"))
+        gs_SVC = GridSearchCV(estimator=SVC(), param_grid=param_grid, scoring="accuracy", cv=3, n_jobs=-1)
+        gs_SVC.fit(x_train, y_train)
+        best_parameters = gs_SVC.best_params_
+        df_for_pickling = pd.DataFrame(best_parameters, index=[0])
+        pickled_gs = df_for_pickling.to_pickle("./gridSearchDataSVC")            
+        st.write("The parameters that lead to the highest accuracy are: ")
+        st.table(pd.read_pickle("./gridSearchDataSVC"))
 
 
-    if st.button("Run a Grid Search"):
-        run_grid_search(model)
-
-    if model == "K-Nearest Neighbors":
+    if model == "K-Nearest Neighbors":        
         algo = st.selectbox(
             "Algorithm to computer nearest neighbor: ",
             ["ball_tree", "kd_tree", "brute", "auto"]
