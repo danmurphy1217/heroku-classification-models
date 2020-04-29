@@ -15,60 +15,68 @@ import webbrowser
 import time
 from bokeh.models.widgets import Div
 import time
+import pickle
 
 # Global Variables
-raw_df = pd.read_csv("esp8266_readings - Sheet1.csv")
-raw_df = pd.DataFrame(raw_df)
 
-df = raw_df.rename(columns={
+pickled_df = pd.DataFrame(pd.read_csv("esp8266_readings - Sheet1.csv")).to_pickle("./uncleaned_df")
+unpickled_df = pd.read_pickle("./uncleaned_df")
+
+# convert from 12 hr to 24 hr time
+
+
+def storeCleanData():
+    raw_df = unpickled_df.rename(columns={
     'Event Name': 'Event_Name', 
     'Value1': 'Digital_Button', 
     'Value2':'Photoresistor', 
     'Value3':'Temp; Humidity'
     })
 
-# drop rows where humidity sensor was not activated
-df = df.drop([0, 1, 2, 3, 4, 5, 6, 7, 8])
-
-#clean temp: humidity column
-df[['Temp', 'Humidity']] = df['Temp; Humidity'].str.split(';', expand=True)
-df = df.drop(columns="Temp; Humidity")
-
-#clean date column
-date_df = pd.DataFrame(df['Date'])
-date_df = date_df['Date'].str.split('at', expand = True)
-
-
-# convert from 12 hr to 24 hr time
-def hourConverter():
+    #clean date column
     times = []
+    date_df = pd.DataFrame(raw_df['Date'])
+    date_df = date_df['Date'].str.split('at', expand = True)
     for val in date_df[1].iteritems():
         if str(val[1][-2:]) == 'AM':
             times.append(int(val[1][0:3]))
         elif str(val[1][-2:]) == 'PM':
             times.append(int(val[1][0:3]) + 12)
-    return times
+    
+    
 
-time_df = pd.DataFrame(hourConverter())
-time_df = time_df.rename(columns={0: 'Hour'})
-# OHE hours
-time_df = pd.get_dummies(time_df.astype(str))
-cols = time_df.columns.tolist() # get name of columns in a list
-# now, reorganize those names 
-cols = ['Hour_1', 'Hour_2', 'Hour_3', 'Hour_4', 'Hour_5', 'Hour_6', 'Hour_7', 'Hour_8', 'Hour_9', 'Hour_10', 'Hour_11', 'Hour_12', 'Hour_13', 'Hour_14', 'Hour_15', 'Hour_16', 'Hour_17', 'Hour_18', 'Hour_19', 'Hour_20', 'Hour_21', 'Hour_22', 'Hour_23', 'Hour_24']
-# now, use the reorganized column names to reorganize your columns
-time_df = time_df[cols]
-#rearrange indeces and concat time to initial df
-df.index = np.arange(0, len(df))
-df = pd.concat([df, time_df], axis =1)
-#drop unnecessary columns
-df = df.drop(columns=['Date'])
+    # drop rows where humidity sensor was not activated
+    
 
-#normalization
-df['Photoresistor'] = df['Photoresistor'].astype(int)/df['Photoresistor'].max().astype(int)
-df['Temp'] = df['Temp'].astype(float)/df['Temp'].astype(float).max()
-df['Humidity'] = df['Humidity'].astype(float)/df['Humidity'].astype(float).max()
-r, c = df.shape
+    #clean temp: humidity column
+    raw_df[['Temp', 'Humidity']] = raw_df['Temp; Humidity'].str.split(';', expand=True)
+    time_df = pd.DataFrame(times)
+    time_df = time_df.rename(columns={0: 'Hour'})
+    # OHE hours
+    time_df = pd.get_dummies(time_df.astype(str))
+    cols = time_df.columns.tolist() # get name of columns in a list
+    # now, reorganize those names 
+    cols = ['Hour_1', 'Hour_2', 'Hour_3', 'Hour_4', 'Hour_5', 'Hour_6', 'Hour_7', 'Hour_8', 'Hour_9', 'Hour_10', 'Hour_11', 'Hour_12', 'Hour_13', 'Hour_14', 'Hour_15', 'Hour_16', 'Hour_17', 'Hour_18', 'Hour_19', 'Hour_20', 'Hour_21', 'Hour_22', 'Hour_23', 'Hour_24']
+    # now, use the reorganized column names to reorganize your columns
+    time_df = time_df[cols]
+    #rearrange indeces and concat time to initial df
+    raw_df.index = np.arange(0, len(raw_df))
+    df = pd.concat([raw_df, time_df], axis =1)
+    #drop unnecessary columns
+    df = df.drop(columns=['Date', 'Temp; Humidity', 'Event_Name'])
+    df = df.drop([0, 1, 2, 3, 4, 5, 6, 7, 8],axis = 0)
+    #normalization
+    df['Photoresistor'] = df['Photoresistor'].astype(int)/df['Photoresistor'].max().astype(int)
+    df['Temp'] = df['Temp'].astype(float)/df['Temp'].astype(float).max()
+    df['Humidity'] = df['Humidity'].astype(float)/df['Humidity'].astype(float).max()
+    r, c = df.shape
+    pickle_data = df.to_pickle("./cleaned_df")
+storeCleanData()
+
+unpickled_clean = pd.read_pickle('./cleaned_df')
+
+
+
 
 st.title("Machine Learning Models predicting on self-collected data")
 
@@ -99,38 +107,35 @@ if part_selector == "Part I. Data Analysis, Cleaning, and Viz":
     4. **_Dates_** (used to incorporate time series into the model)
     """
     st.subheader("**_Part A. Pre-Clean_**")
-    st.dataframe(raw_df.style.highlight_max(axis=0))
-    r, c = raw_df.shape
-    st.text("Shape of Initial Data: {}".format(raw_df.shape) + ". There are " + str(r) + " rows and " + str(c) + " columns.")
+    st.dataframe(unpickled_df.head(10))
+    r, c = unpickled_df.shape
+    st.text("Shape of Initial Data: {}".format(unpickled_df.shape) + ". There are " + str(r) + " rows and " + str(c) + " columns.")
     """
-    Kind of messy... we need to: \n
+    We will need to: \n
     1. Rename Columns. What are Value1? Value2? etc... \n
     2. By taking a look at Value3, we see that the first 9 rows are different from the following 5382. We'll want to remove these or determine a representative placeholder for the missing values. \n
     3. Normalize columns 3 (Value1), 4 (Value2), and 5 (Value3) \n
     3. Split the "Date" column at 'at' and retrieve the hour for each row. Then, we will one-hot-encode the hour values.
     """
-    r, c = df.shape
+    r, c = unpickled_clean.shape
     st.subheader("**_Part B. Post-Clean_**")
     bar = st.progress(0)
     iters = st.empty()
-    action_list = ['Cleaning Data', 'Building Models', 'Creating Visualizations']
+    action_list = ['Cleaning Data', 'Building KNN Model', 'Building SVC Model', 'Creating Visualizations']
     for i in np.arange(1, 5):
-        iters.text("Building Task #{0} : {1}".format(i, action_list[i-2]))
+        iters.text("Building Task #{0} : {1}".format(i, action_list[i-1]))
         bar.progress(int(i)*25)
-        time.sleep(1.5)
-        if i == 4:
-            st.success("Completing The Finishing Touches... This May Take A moment")
+        time.sleep(.75)
 
 
-    # rename columns
-    st.dataframe(df.style.highlight_max(axis=0))
-    st.text("Shape of Cleaned Data: {}".format(df.shape) + ". There are " + str(r) + " rows and " + str(c) + " columns.")
+    st.dataframe(unpickled_clean.head(15))
+    st.text("Shape of Cleaned Data: {}".format(unpickled_clean.shape) + ". There are " + str(r) + " rows and " + str(c) + " columns.")
 
 
 if part_selector == "Part II. Implementing Models":
     st.header("**Part 2. Use and Analyze Various Machine Learning Models:**")
-    x = df.drop(columns=["Digital_Button", "Event_Name"])
-    y = df['Digital_Button']
+    x = unpickled_clean.drop(columns=["Digital_Button"])
+    y = unpickled_clean['Digital_Button']
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = .3, random_state = 42)
 
     st.subheader("First, Choose Your Model: ")
@@ -151,8 +156,10 @@ if part_selector == "Part II. Implementing Models":
             gs_KNN = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, scoring='accuracy', cv=5, n_jobs=-1)
             gs_KNN.fit(x_train, y_train)
             best_parameters = gs_KNN.best_params_
+            df_for_pickling = pd.DataFrame(best_parameters, index=[0])
+            pickled_gs = df_for_pickling.to_pickle("./gridSearchDataKNN")
             st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.DataFrame(best_parameters, index=[0]))
+            return st.table(pd.read_pickle("./gridSearchDataKNN"))
 
         elif model_name == "Support Vector Classifier":
             param_grid = {
@@ -161,11 +168,13 @@ if part_selector == "Part II. Implementing Models":
                 'gamma': ['scale', 'auto']
 
             }
-            gs_SVC = GridSearchCV(estimator=SVC(), param_grid=param_grid, scoring="accuracy", cv=5, n_jobs=-1)
+            gs_SVC = GridSearchCV(estimator=SVC(), param_grid=param_grid, scoring="accuracy", cv=3, n_jobs=-1)
             gs_SVC.fit(x_train, y_train)
             best_parameters = gs_SVC.best_params_
+            df_for_pickling = pd.DataFrame(best_parameters, index=[0])
+            pickled_gs = df_for_pickling.to_pickle("./gridSearchDataSVC")            
             st.write("The parameters that lead to the highest accuracy are: ")
-            return st.table(pd.DataFrame(best_parameters, index=[0]))
+            return st.table(pd.read_pickle("./gridSearchDataSVC"))
 
 
     if st.button("Run a Grid Search"):
@@ -376,8 +385,8 @@ if part_selector == "Part III. Try Out Your Own Data":
 
     @st.cache(show_spinner=True, hash_funcs={st.DeltaGenerator.DeltaGenerator: lambda _: None})
     def buildModel(model_name, input_data):
-        x = df.drop(columns=["Digital_Button", "Event_Name"])
-        y = df['Digital_Button']
+        x = unpickled_clean.drop(columns=["Digital_Button"])
+        y = unpickled_clean['Digital_Button']
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = .3, random_state = 42)
         if model_name == "K-Nearest Neighbors":
             knn_clf = KNeighborsClassifier(algorithm='auto', n_neighbors=5, weights='distance', n_jobs=-1)

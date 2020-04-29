@@ -71,6 +71,7 @@ pandocfilters==1.4.2
 parso==0.6.2
 pathtools==0.1.2
 pexpect==4.8.0
+pickle-mixin==1.0.2
 pickleshare==0.7.5
 Pillow==7.0.0
 pipreqs==0.4.10
