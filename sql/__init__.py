@@ -12,8 +12,7 @@ df_raw[["Temperature", "Humidity"]] = temperature_humidity_df
 df_clean = df_raw.drop(axis = 1, columns = ["Value3"])
 df_clean.columns = ['date', 'event_name', 'digital_button', 'photoresistor', 'temperature', 'humidity']
 
-df_clean.to_csv("./esp8266readings1.csv")
+df_clean.date = df_clean.date.apply(lambda date: date.replace(",", ""))
 
 if __name__ == '__main__':
-    print(df_clean)
-    
+    df_clean.to_csv("./esp8266readings1.csv")
