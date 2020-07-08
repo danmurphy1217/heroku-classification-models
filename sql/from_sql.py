@@ -1,55 +1,58 @@
-from mysql.connector import connect
+import mysql.connector as connect
+import mysql
+import pandas as pd
 import numpy as np
 
-connection = connect(
+# establish connection
+connection = connect.connect(
     user = 'root',
-    password = 'Dpm#1217',
-    host = '127.0.0.1',
-    database = 'playground'
+    password = "Dpm#1217",
+    host='127.0.0.1',
+    database='playground'
 )
-cursor = connection.cursor()
 
+# sample query
 query = (
     "SELECT * FROM readings1"
 )
 
-def query_data(connection, cursor, query):
+def connect_to_sql(connection, query):
     """
-    Returns data from MySql Server that fits the specified query. 
-    @params: query, the query to be used
-    @returns: data from MySQL Server
+    Executes a query statement on a SQL server table. If the query is successful,
+    returns the data. If the query is not successful, the error is returned
+    @params: connection, a connection instance, and query, a query to execute
+    @returns: the data if the query is correct and the error if it is not.
     """
-    # store data from Query
-    data = np.empty(
-        [5381, 6],
-        dtype = str
-    )
+    try:
+        # set cursor instance
+        cursor = connection.cursor(buffered=True)
+        # execute the query
+        cursor.execute(query)
+        # retrieve data from query
+        data_from_query = pd.read_sql_query(
+            query,
+            connection
+        )
+        return data_from_query 
+    except mysql.connector.Error as e:
+        return e
 
-    # execute query
-    cursor.execute(query)
+data = connect_to_sql(connection = connection, query = query)
+raw_df = pd.DataFrame(
+    data
+)
 
-    index_list = []
-    date_list = []
-    dig_button_list = []
-    photoresistor_val_list = []
-    temp_list = []
-    humidity_list = []
-    # loop through tuple & unpack
-    for index, date, event_name, dig_button, photoresistor_val, temp, humidity in cursor:
-        index_list.append(index)
-        date_list.append(date)
-        dig_button_list.append(dig_button)
-        photoresistor_val_list.append(photoresistor_val)
-        temp_list.append(temp)
-        humidity_list.append(humidity)
-    return index_list, date_list, dig_button_list, photoresistor_val_list, temp_list, humidity_list
+def clean_data(data, columns_to_drop):
+    """
+    returns the cleaned dataset with the specifier columns dropped
+    @params: data, a dataset and columns_to_drop, a list of columns to drop from the dataset
+    @returns: the cleaned dataset
+    """
+    data = data.drop(columns_to_drop, axis = 1)
+    return data
+clean_df = clean_data(raw_df, ['i', 'event_name'])
 
-index_list, date_list, dig_button_list, photoresistor_val_list, temp_list, humidity_list = query_data(connection, cursor, query)
-clean_index_list = [int(index) for index in index_list]
-clean_date_list = [date.encode('utf-8') for date in date_list]
-clean_temp_list = [float(temp) for temp in temp_list]
-clean_humidity_list = [float(humidity) for humidity in humidity_list]
-            
-        
+
 if __name__ == '__main__':
-    pass
+    print(clean_df)
+    connection.close()
