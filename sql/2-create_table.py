@@ -1,10 +1,8 @@
 import mysql, mysql.connector as connector 
-import numpy as np
 import pandas as pd
 from mysql.connector import errorcode
 
-
-df = pd.read_csv('esp8266readings1.csv')
+df = pd.read_csv('./sql/esp8266readings1.csv')
 
 # SQL db name
 db_name = 'playground'
