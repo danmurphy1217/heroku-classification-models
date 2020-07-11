@@ -19,18 +19,18 @@ raw_df = raw_df.drop(
 )
 TABLE = "readings2"
 
+query = """INSERT INTO {} (date, digital_button, photoresistor, temperature, humidity)
+               VALUES (%s, %s, %s, %s, %s)""".format(
+                TABLE
+            )
 
-def data_to_sql(cursor, df, TABLE):
+def data_to_sql(cursor, df, TABLE, query):
     """
     prepare data for SQL insertion
     @params: cursor, a mysql.connector().cursor() instance for executing SQL queries, 
              df, a pandas dataframe, and TABLE, the table name to insert into
     @returns: the state of the SQL query
     """
-    query = """INSERT INTO {} (date, digital_button, photoresistor, temperature, humidity)
-               VALUES (%s, %s, %s, %s, %s)""".format(
-                TABLE
-            )
     records_for_insertion = ([tuple([df.iloc[i][j] for j in range(len(df.columns))]) for i in range(len(df))])
 
     try:
@@ -50,7 +50,8 @@ if __name__ == "__main__":
     data_to_sql(
         cursor, 
         raw_df,
-        TABLE
+        TABLE,
+        query
     )
     cursor.close()
     cnx.close()
