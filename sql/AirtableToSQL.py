@@ -129,7 +129,7 @@ feedback_insertion_query = """INSERT INTO Feedback (`ID`, `email`, `Good use of 
                                                     `General Feedback`, `Submitted At`, `User`, `MeetUp`, `Round (From Last Meetup)`)
                                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 
-def data_to_sql(cursor, data, query):
+def data_to_sql(cursor, cnx, data, query):
     """
     prepare data for SQL insertion
     @params: cursor, a mysql.connector().cursor() instance for executing SQL queries, 
@@ -147,6 +147,7 @@ def data_to_sql(cursor, data, query):
             query,
             records_for_insertion_final
         )
+        cnx.commit()
         print(str(cursor.rowcount) + " rows successfully added to the table.")
         
     except connector.Error as err:
@@ -155,12 +156,12 @@ def data_to_sql(cursor, data, query):
 
 if __name__ == "__main__":
     # connection to MySQL
-    connection = connector.connect(
+    cnx = connector.connect(
         user = "root",
         password = "Dpm#1217",
         host='127.0.0.1'
     )
-    cnx = connection.cursor()
+    cursor = cnx.cursor()
 
     # data for tables
     users_df_final_clean = users_df_final_clean.drop(
@@ -181,10 +182,11 @@ if __name__ == "__main__":
     feedback_df_final_clean.NPS = feedback_df_final_clean.NPS.astype(str)
 
     # push data to sql
-    #----------------
     # create_database( cnx, "Jam" ) # only run once
-    use_database( cnx, "Jam" )
-    create_tables( cnx, TABLES )
-    data_to_sql(cursor = cnx, data = users_df_final_clean, query = jammers_insertion_query)
-    data_to_sql(cursor = cnx, data= meetups_df_final_clean, query = meetups_insertion_query) 
-    data_to_sql(cursor = cnx, data = feedback_df_final_clean, query = feedback_insertion_query)
+    use_database( cursor, "Jam" )
+    create_tables( cursor, TABLES )
+    data_to_sql(cursor, cnx, data = users_df_final_clean, query = jammers_insertion_query)
+    data_to_sql(cursor, cnx, data= meetups_df_final_clean, query = meetups_insertion_query) 
+    data_to_sql(cursor, cnx, data = feedback_df_final_clean, query = feedback_insertion_query)
+    cursor.close()
+    cnx.close()
