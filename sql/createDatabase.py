@@ -19,7 +19,7 @@ def create_database(cursor, DB_NAME):
     """
     try:    
         cursor.execute(
-            f"CREATE DATABASE {DB_NAME} DEFAULT CHARACTER SET 'utf-8'"
+            f"CREATE DATABASE {DB_NAME}"
         )
         print(f"Successlly created {DB_NAME}")
 

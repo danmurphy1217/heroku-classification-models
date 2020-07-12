@@ -22,7 +22,7 @@ def main() -> list:
     function that verifies credentials for google sheets API and, if the verification
     is successful, returns the requested data (columns A - E in this scenario).
     @params: None
-    @returns: the queried data from excel.
+    @returns: the queried data from sheets.
     """
     creds = None
     if os.path.exists('token.pickle'):
@@ -50,9 +50,9 @@ def main() -> list:
     ).execute()
     return result.get("values")
 
-excel_data = main()
+sheets_data = main()
 # list of tuples for sending to SQL
-preprocess_for_sql = [tuple(data) for data in excel_data]
+preprocess_for_sql = [tuple(data) for data in sheets_data]
 
 
 
@@ -67,7 +67,7 @@ cnx = connector.connect(
     database='playground'
 )
 cursor = cnx.cursor()
-TABLE = 'excelToSQL' # name of table
+TABLE = 'sheetsToSQL' # name of table
 # Query to execute -> should be an INSERT statement
 QUERY = """INSERT INTO {} (`date`, `event_name`, `digital button`, `photoresistor`, `temperature; humidity`)
                VALUES (%s, %s, %s, %s, %s)""".format(
@@ -84,7 +84,7 @@ def create_table(table: str, connector: classmethod, cursor: classmethod) -> Non
     # statement for creating the table
     # add for loop here if creating multiple tables
     TABLES[table] = (
-        "CREATE TABLE `excelToSQL`("
+        "CREATE TABLE `sheetsToSQL`("
         "`date` VARCHAR(100),"
         "`event_name` VARCHAR(16),"
         "`digital button` TINYINT(1),"
