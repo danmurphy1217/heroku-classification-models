@@ -190,3 +190,5 @@ if __name__ == "__main__":
     data_to_sql(cursor, cnx, data = feedback_df_final_clean, query = feedback_insertion_query)
     cursor.close()
     cnx.close()
+
+    

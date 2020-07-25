@@ -1,9 +1,11 @@
 import mysql, mysql.connector as connector
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn import svm
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
+from sklearn.pipeline import Pipeline
 import numpy as np
+import math
 
 conn = connector.connect(
     user = 'root',
@@ -38,41 +40,96 @@ def connect_to_sql(connection, query):
     except mysql.connector.Error as e:
         return e
 
+def filter_by_date(day = None, month = None, year = None):
+    """
+    Filters data by the specified date and returns data that meets the criterion.
+
+    Parameters
+    ----------
+    day : (str)
+        The day to filter for
+    month : (str)
+        The month to filter for
+    year: (str)
+        The year to filter for
+
+    Returns
+    ----------
+    Data that meets the specified date.
+    """
+    filters = ["day", "month", "year"]
+    params = {"day" : day, "month" : month, "year" : year}
+    non_null_params = [(param, params.get(param)) for param in filters if params.get(param) != None] # filter out none types
+    q = "SELECT * FROM readings1 WHERE "
+    for param in non_null_params:
+        q+= f"{param}" # change this to fit WHERE x = y, z = a, etc...
+    return q
+
+
+
+
+
+# For ML Models, we will need to compile a dataset, clean, and structure it: 
+
 data = connect_to_sql(connection = conn, query = q)
 raw_df = pd.DataFrame(
     data
 )
 
-def logreg(pen, sol):
+removeColumns = raw_df.drop(axis=1, columns=["event_name", 'i'])
+removeColumns.date = removeColumns.date.apply(lambda d : d.split()[-1].split(':')[0] + " " + d.split()[-1].split(':')[1][-2:]) # get hours and timestamp
+def timeConverter(time):
+    if time[-2:] == "PM":
+        return int(time[:-2]) + 12
+    return int(time[:-2])
+
+times = []
+[times.append(timeConverter(time)) for time in removeColumns.date]
+
+# one-hot encode
+removeColumns.date = times
+ohe = pd.get_dummies(removeColumns.date)
+
+# scale the data
+scaler = MinMaxScaler()
+normalized_sensor_data = pd.DataFrame(scaler.fit_transform(removeColumns.drop(axis =0, columns = ["date"])),
+    columns = [
+        "dig_button",
+        "photoresistor",
+        "temp",
+        "humidity"
+    ]
+)
+clean_df = pd.concat(
+    [normalized_sensor_data, ohe],
+    axis=1
+)
+
+X, y = clean_df.drop(axis = 0, columns="dig_button"), clean_df.dig_button
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = .3, random_state = 42)
+
+default = {"kernel" : "linear", "gamma" : "auto"}
+def SVC(df, params = default):
     """
-    Build a logistic regression model with the parameters passed
+    Build a SVC model with the specified parameters.
 
     Parameters
     ----------
-    pen : (str)
-        the norm that should be used in the penalization. 
-        L1 is the manhattan distance and L2 is euclidean.
-    sol : (str)
-        the solver that should be used for optimization.
-        Accepted solvers are lbfgs, liblinear and saga.
+    df : (str)
+        the dataframe to be used for fitting and predicting on the model.
+    params : (dict)
+        a dictionary of key-value pairs where each key is a valid SVC 
+        parameter and each value is the value for that parameter.
     
     Returns
     ----------
-    The accuracy of the model along with the model parameters
+    The accuracy of the model
     """
-    X, y = raw_df
-    
+    accepted_params = ["kernel", "gamma"]
+    passed_params = [params.get(param) for param in accepted_params]
+    if len(passed_params) == len(accepted_params):
+        clf = svm.SVC(kernel = params.get("kernel"), gamma = params.get("gamma")).fit(X_train, y_train)
+        return clf.score(X_test, y_test)
+    clf = svm.SVC().fit(X_train, y_train)
+    return clf.score(X_test, y_test)
 
-
-removeColumns = raw_df.drop(axis=1, columns=["event_name", 'i'])
-removeColumns.date = removeColumns.date.apply(lambda d : d.split()[-1].split(':')[0] + " " + d.split()[-1].split(':')[1][-2:]) # get hours and timestamp
-
-removeColumns.date = map(time_converter() , removeColumns.date)
-print(removeColumns.date)
-ohe_hours = pd.get_dummies(removeColumns.date)
-ohe_df = removeColumns.join(
-    pd.DataFrame(
-        ohe_hours
-    )
-)
-print(ohe_df)
