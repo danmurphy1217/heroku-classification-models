@@ -40,7 +40,7 @@ class StructureData:
         A cleaned a structured dataframe prepared for machine learning.
         """
         def timeConversion(time):
-            """A helper function for `c` that converts AM and PM timestamps into 24-hour times"""
+            """A helper function for `cleanData` that converts AM and PM timestamps into 24-hour times"""
             if time[-2:] == "PM":
                 return int(time[:-2]) + 12
             return int(time[:-2])

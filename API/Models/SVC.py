@@ -56,7 +56,7 @@ class SVC:
             tn, fp, fn, tp = confusion_matrix(y_test, y_preds).ravel()
             FPR = fp/(fp+tn)
             FNR = fn/(fn+tp)
-            return accuracy, precision, recall, f1, FPR, FNR # recall + FNR = 1
+            return round(accuracy, 3), round(precision, 3), round(recall, 3), round(f1, 3), round(FPR, 3), round(FNR, 3) # recall + FNR = 1
 
         accepted_params = ["kernel", "gamma"]
         passed_params = [params.get(param) for param in accepted_params]
