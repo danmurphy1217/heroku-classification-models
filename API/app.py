@@ -1,12 +1,15 @@
-import flask_cors, requests, mysql 
-from flask import request, jsonify, make_response, Flask
+# import internal modules
 from Responses.models import knn_response, svc_response
 from Responses.sensors import summary
 from Sensors.Photoresistor import Photoresistor
 from Sensors.Humidity import Humidity
 from Sensors.Temperature import Temperature
+from Date.DateFiltering import Filter
+# import external packages
 import mysql, mysql.connector as connector
 import numpy as np
+import flask_cors, requests, mysql 
+from flask import request, jsonify, make_response, Flask
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
@@ -34,17 +37,17 @@ def model(model):
         "error" : f"that model is not currently supported. Try: {', '.join(accepted_models)}"
     }))
 
+# DATE ENDPOINT
 @app.route("/api/v1/date/", methods=["GET"])
 def date():
     acceptable_args = ["day", "month", "year"]
     args = request.args.to_dict()
     valid_args = [arg for arg in acceptable_args if args.get(arg)]
 
-    return jsonify({
-        "res" : filter_by_date(day = args.get("day"), month= args.get("month"), year=args.get("year")),
-        "args" : args,
-        "valid_args" : valid_args
-    })
+    fil = Filter()
+    conn = connector.connect(user = 'root', password = "Dpm#1217", host='127.0.0.1',database='playground')
+    res = fil.Date(connection = conn, day = str(args.get("day")), month= args.get("month"), year= str(args.get("year")))    
+    return jsonify(res)
 
 # SENSOR ENDPOINT    
 @app.route("/api/v1/sensor/", defaults={"sensor_type" : None})
