@@ -30,7 +30,7 @@ def model(model):
     args = request.args.to_dict()
 
     if passed_model == "svc":
-        return svc_response(model_params=args)
+        return svc_response(model_params= args)
     elif passed_model == "knn":
         return knn_response(model_params = args)
     return make_response(jsonify({

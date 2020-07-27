@@ -21,7 +21,7 @@ def  svc_response(model_params = None):
 
     if len(model_params) == 0:
         default = {"kernel" : "linear", "gamma" : "auto"}
-        model = SVC(params= default)
+        model = SVC()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= default)
         return make_response(jsonify(
                     {
@@ -31,7 +31,7 @@ def  svc_response(model_params = None):
                 ), 200)
     elif len(valid_provided_gamma) == 0 and len(valid_provided_kernel) == 0:
         default = {"kernel" : "linear", "gamma" : "auto"}
-        model = SVC(params= default)
+        model = SVC()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= default)
         return make_response(jsonify({
                 "Warning" : "The parameters specified for Gamma and Kernel were incorrect.",
@@ -41,7 +41,7 @@ def  svc_response(model_params = None):
     # custom warning for incorrect gamma
     elif len(valid_provided_gamma) == 0:
         default = {"kernel" : "linear", "gamma" : "auto"}
-        model = SVC(params= default)
+        model = SVC()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= {"kernel" : " ".join(valid_provided_kernel), "gamma" : accepted_params.get("gamma").get("default")})
         return make_response(jsonify({
                 "Warning" : "Gamma was not correctly specified. The default value parameter for Gamma, 'auto,' was used.",
@@ -49,15 +49,15 @@ def  svc_response(model_params = None):
             }), 200)
     # custom warning for incorrect kernel
     elif len(valid_provided_kernel) == 0:
-        model = SVC(params= {"kernel" : accepted_params.get("kernel").get("default"), "gamma" : " ".join(valid_provided_gamma)})
-        results = model.buildModel(X_train, X_test, y_train, y_test)
+        model = SVC()
+        results = model.buildModel(X_train, X_test, y_train, y_test, params= {"kernel" : accepted_params.get("kernel").get("default"), "gamma" : " ".join(valid_provided_gamma)})
         return make_response(jsonify({
                 "Warning" : "Kernel was not correctly specified. The default Kernel value, 'linear,' was used.",
                 "Results": results
             }), 200) 
 
     elif len(model_params) == len(accepted_params):
-        model = SVC(params= model_params)
+        model = SVC()
         results = model.buildModel(X_train, X_test, y_train, y_test, params=model_params)
         return make_response(jsonify({
             "Results" : results,
@@ -94,7 +94,7 @@ def knn_response(model_params = None):
 
     if len(model_params) == 0:
         default = {"n_neighbors" : 5, "algorithm" : "auto"}
-        model = KNN(params= default)
+        model = KNN()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= default)
         return make_response(jsonify(
                     {
@@ -104,7 +104,7 @@ def knn_response(model_params = None):
                 ), 200)
     elif len(valid_provided_neighbors) == 0 and len(valid_provided_algo) == 0:
         default = {"n_neighbors" : 5, "algorithm" : "auto"}
-        model = KNN(params= default)
+        model = KNN()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= default)
         return make_response(jsonify({
                 "Warning" : "The parameters specified for n_neighbors and algorithm were incorrect.",
@@ -114,7 +114,7 @@ def knn_response(model_params = None):
     # custom warning for incorrect n_neighbors
     elif len(valid_provided_neighbors) == 0:
         default = {"kernel" : "linear", "gamma" : "auto"}
-        model = KNN(params= default)
+        model = KNN()
         results = model.buildModel(X_train, X_test, y_train, y_test, params= {"algorithm" : " ".join(valid_provided_algo), "n_neighbors" : accepted_params.get("n_neighbors").get("default")})
         return make_response(jsonify({
                 "Warning" : "n_neighbors was not correctly specified. The default value parameter for n_neighbors, 5, was used.",
@@ -123,7 +123,7 @@ def knn_response(model_params = None):
     # custom warning for incorrect kernel
     elif len(valid_provided_algo) == 0:
         params = {"algorithm" : accepted_params.get("algorithm").get("default"), "n_neighbors" : valid_provided_neighbors[0]}
-        model = KNN(params= params)
+        model = KNN()
         results = model.buildModel(X_train, X_test, y_train, y_test, params=params)
         return make_response(jsonify({
                 "Warning" : "Algorithm was not correctly specified. The default Algorithm value, 'auto,' was used.",
@@ -131,7 +131,7 @@ def knn_response(model_params = None):
             }), 200) 
 
     elif len(model_params) == len(accepted_params):
-        model = KNN(params= model_params)
+        model = KNN()
         results = model.buildModel(X_train, X_test, y_train, y_test, params=model_params)
         return make_response(jsonify({
             "Results" : results,

@@ -4,10 +4,10 @@ from sklearn.metrics import confusion_matrix
 from Models.Data import X_train, X_test, y_train, y_test
 
 class SVC:
-    def __init__(self, params):
-        self.params = params
-    
-    def buildModel(self, train_x, test_x, train_y, test_y, params = {"kernel" : "linear", "gamma" : "auto"}):
+    def __init__(self):
+        pass
+    @classmethod
+    def buildModel(cls, train_x, test_x, train_y, test_y, params = {"kernel" : "linear", "gamma" : "auto"}):
         """
         Builds a Support Vector Classification model and returns the following metrics:
             1. The models accuracy : percent correctly predicted divided by the total predictions made
@@ -79,5 +79,11 @@ class SVC:
         clf.fit(X_train, y_train)
         y_preds = clf.predict(X_test)
         #return the metrics
-        return metrics(y_preds, y_test)        
+        return metrics(y_preds, y_test)   
+
+        @classmethod
+        def updateModel(cls, query):
+            """
+            """
+            pass  
 

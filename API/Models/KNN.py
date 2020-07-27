@@ -4,9 +4,10 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.metrics import confusion_matrix
 
 class KNN:
-    def __init__(self, params):
-        self.params = params
-    def buildModel(self, train_x, test_x, train_y, test_y, params = {"n_neighbors" : 5, "weights" : "distance", "algorithm" : "auto"}):
+    def __init__(self):
+        pass
+    @classmethod
+    def buildModel(cls, train_x, test_x, train_y, test_y, params = {"n_neighbors" : 5, "weights" : "distance", "algorithm" : "auto"}):
         """
         Builds a K Neighbors Classifier model and returns the following metrics:
             1. The models accuracy : percent correctly predicted divided by the total predictions made
@@ -79,3 +80,8 @@ class KNN:
         y_preds = clf.predict(X_test)
         #return the metrics
         return metrics(y_preds, y_test)
+
+        @classmethod 
+        def updateModel(cls, query):
+            """"""
+            pass
