@@ -1,15 +1,15 @@
 from mysql import connector
 import boto3, sys, mysql
 
-ENDPOINT = "ls-dec1d5133329eca3f8522daadb38ee487e90a1eb.c4bmr14mp8ah.us-east-1.rds.amazonaws.com"
+ENDPOINT = "database-1.cqr3wactoekt.us-east-1.rds.amazonaws.com"
 PORT = "3306"
 REGION="us-east-1"
-USR = "dbmasteruser"
-DBNAME="mysql"
-passwd = "11111111" # password since db is public
+USR = "dan"
+DBNAME="api"
 
-client = boto3.client('rds')
-# token = client.generate_db_auth_token(DBHostname=ENDPOINT, Port=PORT, DBUsername=USR, Region= REGION) # passwd from AWS
+session = boto3.Session(profile_name="dan")
+client = boto3.client('rds', region_name=REGION)
+token = client.generate_db_auth_token(DBHostname=ENDPOINT, Port=PORT, DBUsername=USR, Region=REGION)
 
 class DataMigration:
     def __init__(self, cnx):
@@ -40,22 +40,24 @@ class DataMigration:
                 month VARCHAR(30), year INT NOT NULL, date VARCHAR(100),\
                 photoresistor INT NOT NULL, digital_button INT NOT NULL,\
                 temp DECIMAL(4, 2), humidity DECIMAL(4, 2));"
-        cur.execute(q)
-        res = cur.fetchall()
-        return f"Table {tableName} was created successfully with the following columns and data types: {colInfo}."
+        
+        try:
+            cur.execute(q)
+            return f"Table {tableName} was created successfully with the following columns and data types: {colInfo}."            
+        except:
+            return "Table already exists."
 
     def insertData(self, q):
         """
         Insert data into mySQL table.
         """
 
+conn =  connector.connect(host=ENDPOINT, user=USR, passwd= "Dpm#1217", port=PORT, database=DBNAME)
+db = DataMigration(conn)    
+_ =db.establishConnection()
 
-if __name__ == "__main__":
-    conn =  connector.connect(host=ENDPOINT, user=USR, passwd= passwd, port=PORT, database=DBNAME)
-    db = DataMigration(conn)
-    cols = {"day" : "INT NOT NULL", "month" : "VARCHAR(30)", "year":"INT NOT NULL", "date" : "VARCHAR(100)", 
-            "photoresistor":"INT NOT NULL", "digital_button": "INT NOT NULL", "temp":"INT NOT NULL", "humidity":"INT NOT NULL"}  
-    db.createTable(tableName = "readings", colInfo = cols)
-    # print(``' '.join([list(cols.keys())[i]` + ' ' +list(cols.values())[i]+',' for i in range(len(cols.keys()))]))
-
+# CREATE TABLE
+cols = {"day" : "INT NOT NULL", "month" : "VARCHAR(30)", "year":"INT NOT NULL", "date" : "VARCHAR(100)", 
+        "photoresistor":"INT NOT NULL", "digital_button": "INT NOT NULL", "temp":"INT NOT NULL", "humidity":"INT NOT NULL"}  
+print(db.createTable(tableName = "readings", colInfo = cols))
 
